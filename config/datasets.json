@@ -1,0 +1,17 @@
+{
+  "ASVspoof 2017": {
+    "train": {
+      "url": "",
+      "path_to_dataset": "..\\data\\corpus\\ASVspoof2017\\",
+      "path_to_protocol": "..\\data\\corpus\\ASVspoof2017\\protocol\\protocol_V2\\ASVspoof2017_V2_dev.trl.txt",
+      "path_to_wav": "..\\data\\corpus\\ASVspoof2017\\wav\\"
+    },
+    "dev": {
+      "url": "https://datashare.is.ed.ac.uk/handle/10283/3055",
+      "path_to_dataset": "..\\data\\corpus\\ASVspoof2017\\",
+      "path_to_protocol": "..\\data\\corpus\\ASVspoof2017\\protocol\\protocol_V2\\ASVspoof2017_V2_dev.trl.txt",
+      "path_to_wav": "..\\data\\corpus\\ASVspoof2017\\wav\\"
+    }
+  },
+  "ASVspoof 2019": {}
+}

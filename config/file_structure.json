@@ -1,0 +1,31 @@
+{
+  "project_path": ".",
+  "config": {
+    "datasets": {
+      "asvspoof_2017": {
+        "path_to_audio_files": {
+          "train": "..\\data\\corpus\\ASVspoof2017\\wav\\train\\",
+          "development": "..\\data\\corpus\\ASVspoof2017\\wav\\dev\\",
+          "evaluation": "..\\data\\corpus\\ASVspoof2017\\wav\\eval\\"
+        },
+        "path_to_protocol_files": {
+          "train": "..\\data\\corpus\\ASVspoof2017\\protocol\\asvspoof2017_train.txt",
+          "development": "..\\data\\corpus\\ASVspoof2017\\protocol\\asvspoof_2017_dev.txt",
+          "evaluation": "..\\data\\corpus\\ASVspoof2017\\protocol\\asvspoof2017_eval.txt"
+        }
+      },
+      "asvspoof_2019": {
+        "path_to_audio_files": {
+          "development": null,
+          "evaluation": null,
+          "train": null
+        },
+        "path_to_protocol_files": {
+          "development": null,
+          "evaluation": null,
+          "train": null
+        }
+      }
+    }
+  }
+}
