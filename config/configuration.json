@@ -1,0 +1,35 @@
+{
+    "mlp": [
+        {
+            "numberOfDenseUnits": 3,
+            "denseUnitsSizes": [
+                512,
+                512,
+                512
+            ],
+            "activations": [
+                "relu",
+                "relu",
+                "relu"
+            ],
+            "useDropout": 3,
+            "dropout": "AlphaDropout",
+            "dropoutRates": [
+                0.1,
+                0.1,
+                0.1
+            ],
+            "kernelInitializer": "lecun_normal",
+            "optimizer": "sgd",
+            "numberOfClasses": 2
+        }
+    ],
+    "cnn": [
+        {}
+    ],
+    "lstm": [
+        {}
+    ],
+    "gmmUbm": [],
+    "svm": []
+}
