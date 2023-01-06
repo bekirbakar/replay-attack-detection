@@ -22,6 +22,20 @@
             "kernelInitializer": "lecun_normal",
             "optimizer": "sgd",
             "numberOfClasses": 2
+        },
+        {
+            "frames": {
+                "denseUnits": "512-512-512",
+                "activation": "relu"
+            },
+            "ltas": {
+                "denseUnits": "512-512-512",
+                "activation": "relu"
+            },
+            "powerSpectrum": {
+                "denseUnits": "512-512-512",
+                "activation": "relu"
+            }
         }
     ],
     "cnn": [
