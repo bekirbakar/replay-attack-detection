@@ -84,12 +84,12 @@ while (epoch < 10000) and (not done_looping):
     if this_eer < best_eer * 0.995:
         # If best eer is found.
         best_eer = this_eer
-        scoring.save(score_file, feature_list[feature] + "dev_cnn.txt")
+        scoring.save(score_file, f"{feature_list[feature]}dev_cnn.txt")
 
         # Save best model.
-        model_filename = feature_list[feature] + "_cnn.h5"
+        model_filename = f"{feature_list[feature]}_cnn.h5"
         keras_model.save(path_to_model + model_filename)
-        print("Best eer = {}, model saved.\n".format(best_eer))
+        print(f"Best eer = {best_eer}, model saved.\n")
         early_stop = 0
 
     if early_stop == 300:

@@ -10,6 +10,7 @@ from keras.backend import clear_session
 def deep_features(feature_list, dataset_index, subset_list, file_list,
                   path_to_excel, filename):
     start, indexes, end = 0, 0, 0
+    feat_dir = "../data/features/"
     for feature in feature_list:
         # Read parameters from excel file(.xlsx).
         xl = pd.ExcelFile(path_to_excel)
@@ -25,7 +26,6 @@ def deep_features(feature_list, dataset_index, subset_list, file_list,
         intermediate_layer_model = keras.models.Model(
             inputs=model.input, outputs=model.get_layer("hidden3").output)
 
-        feat_dir = "../data/features/"
         for subset in subset_list:
             mat_file = feat_dir + dataset.upper() + "/mat_files/" + subset
 
@@ -44,12 +44,9 @@ def deep_features(feature_list, dataset_index, subset_list, file_list,
             # Convert data types to float32.
             data = data.astype("float32")
             # Loop through files.
-            for file in range(0, len(file_list)):
+            for file in range(len(file_list)):
                 # Extract features from intermediate layer.
-                if feature == "ltas":
-                    buffer = data[file:(file + 1)]
-                else:
-                    buffer = data[start:end]
+                buffer = data[file:(file + 1)] if feature == "ltas" else data[start:end]
                 intermediate_output = intermediate_layer_model.predict(buffer)
 
                 # Save feature per file.
@@ -58,7 +55,7 @@ def deep_features(feature_list, dataset_index, subset_list, file_list,
                                  appendmat=True, format="5",
                                  long_field_names=False, do_compression=False,
                                  oned_as="row")
-                if feature is not "ltas":
+                if feature != "ltas":
                     start = end
                     end = indexes[file] + start
 

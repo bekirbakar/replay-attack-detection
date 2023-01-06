@@ -2,11 +2,11 @@
 import keras
 import numpy
 from keras.backend import clear_session
-from keras.layers import Dense, Activation, Dropout
+from keras.layers import Activation, Dense, Dropout
 from keras.models import Sequential
 
 import source.scoring as scoring
-from source.helpers import load_excel, read_data, save_excel, save_data
+from source.helpers import load_excel, read_data, save_data, save_excel
 
 
 def create_network(n_dense, input_shape, dense_units, activation, dropout,
@@ -42,7 +42,7 @@ def create_network(n_dense, input_shape, dense_units, activation, dropout,
     model.add(dropout(dropout_rate))
 
     # Set hidden layer(s).
-    for i in range(n_dense - 1):
+    for _ in range(n_dense - 1):
         model.add(Dense(dense_units, kernel_initializer=kernel_initializer))
         model.add(Activation(activation))
         # model.add(BatchNormalization())
@@ -73,32 +73,29 @@ def evaluate_model(filename, e_data):
         EER and score_file.
     """
     # Load best model.
-    path_to_model = "../data/models/" + filename + ".h5"
+    path_to_model = f"../data/models/{filename}.h5"
     best_model = keras.models.load_model(path_to_model)
 
-    # Predict on best model.
-    eval_predictions = best_model.predict(e_data, verbose=0)
-
-    return eval_predictions
+    return best_model.predict(e_data, verbose=0)
 
 
 # Feature list for loop.
 feature_list = ["ltas"]
 evaluate = True
-for feature in range(len(feature_list)):
-    print("Reading {} data...".format(feature_list[feature]))
+for feature_ in feature_list:
+    print(f"Reading {feature_} data...")
 
     # Read mlp parameters from excel file.
-    mlp_params = load_excel(feature_list[feature])
+    mlp_params = load_excel(feature_)
 
     # Read training data.
-    train_data = read_data(feature_list[feature], "train")
+    train_data = read_data(feature_, "train")
     x_train = train_data["x_data"]
     y_train = train_data["y_data"]
     batch_size = train_data["mini_batch_size"]
 
     # Read development data and labels.
-    test_data = read_data(feature_list[feature], "dev")
+    test_data = read_data(feature_, "dev")
     x_test = test_data["x_data"]
     y_test = test_data["y_data"]
     test_labels = test_data["labels"]
@@ -134,7 +131,7 @@ for feature in range(len(feature_list)):
         epoch = 0
         while (epoch < 10000) and (not done_looping):
             # Report "1" for first epoch, "n_epochs" for last epoch.
-            epoch = epoch + 1
+            epoch += 1
 
             # Train model.
             metrics = keras_model.fit(x_train, y_train,
@@ -158,32 +155,30 @@ for feature in range(len(feature_list)):
             if this_eer < best_eer * 0.995:
                 # If best eer is found.
                 best_eer = this_eer
-                save_data(score_file, feature_list[feature] + str(line) +
-                          "dev.txt")
+                save_data(score_file, (feature_ + str(line) + "dev.txt"))
 
                 # Save best model.
-                model_file = "../data/models/best_model_" + feature_list[
-                    feature] + str(line) + ".h5"
+                model_file = f"../data/models/best_model_{feature_}{str(line)}.h5"
                 keras_model.save(model_file)
-                print("Best eer = {}, model saved.\n".format(best_eer))
+                print(f"Best eer = {best_eer}, model saved.\n")
                 early_stop = 0
 
             if early_stop == 300:
                 done_looping = True
                 break
 
-        if evaluate is True:
+        if evaluate:
             print("Loading evaluation data...")
-            eval_data = read_data(feature_list[feature], "eval")
+            eval_data = read_data(feature_, "eval")
             load_eval_data = False
             eval_eer = evaluate_model(eval_data, line)["eval_eer"]
         else:
             eval_eer = 0
-        save_excel("mlp-scores.xls", feature_list[feature], line)
+        save_excel("mlp-scores.xls", feature_, line)
 
 # Evaluate model.
 ltas_results = []
 eval_data = ""  # Read data here. Example: read_data("mfcc", "eval")
-for index in range(0, 1):
+for index in range(1):
     evaluation = evaluate_model(eval_data, index)
     ltas_results.append(evaluation["eval_eer"])
