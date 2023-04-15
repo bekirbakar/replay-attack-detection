@@ -17,3 +17,5 @@ matlab/hp_filter.m
 
 scripts/**
 snippets/**
+
+hidden-files/**
