@@ -29,8 +29,7 @@ def ltas(input_sig, fs=16000, fc=0, win_time=0.02, shift_time=0.01):
     overlap = window_len - int(shift_time * fs)
 
     # Split signal into frames.
-    framed_sig = framing(sig=input_sig, win_size=window_len,
-                         win_shift=window_len - overlap,
+    framed_sig = framing(sig=input_sig, win_size=window_len, win_shift=window_len - overlap,
                          context=(0, 0), pad="zeros")
 
     # Windowing.
@@ -41,11 +40,7 @@ def ltas(input_sig, fs=16000, fc=0, win_time=0.02, shift_time=0.01):
     n_fft = 2 ** int(np.ceil(np.log2(window_len)))
 
     # Low frequency cutting variables.
-    if fc == 0:
-        start = 0
-    else:
-        start = int((fc * n_fft) / fs)
-
+    start = 0 if fc == 0 else int((fc * n_fft) / fs)
     end = int(n_fft / 2) + 1
     n_elements = int(end - start)
 

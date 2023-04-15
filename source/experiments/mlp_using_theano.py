@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import numpy
 import theano
 import theano.tensor as T
-
-from load_data import load_data
-from source.scoring import calculate_eer
 from theano_models import MLP
+
+from source.load_data import load_data
+from source.scoring import calculate_eer
 
 learning_rate = 0.001
 L1_reg = 0.00
@@ -94,7 +94,7 @@ done_looping = False
 eer = []
 
 while (epoch < n_epochs) and (not done_looping):
-    epoch = epoch + 1
+    epoch += 1
     for minibatch_index in range(n_train_batches):
 
         train_model(minibatch_index)
@@ -128,7 +128,7 @@ while (epoch < n_epochs) and (not done_looping):
                 this_eer = calculate_eer(p_values)
                 eer.append(this_eer)
 
-                print("Best eer until now is ___{}____".format(this_eer))
+                print(f"Best eer until now is ___{this_eer}____")
                 print(("Epoch %i, minibatch %i/%i, test error of "
                        "best model %f %%") %
                       (epoch, minibatch_index + 1, n_train_batches,

@@ -6,7 +6,7 @@ import theano
 import theano.tensor as T
 
 import source.features as features
-from source.scoring import fix_scores, mean_of_frames, create
+from source.scoring import create, fix_scores, mean_of_frames
 
 
 class LogisticRegression:
@@ -14,12 +14,11 @@ class LogisticRegression:
 
 
 # Definitions
-path_to_mfcc_features = "../../data/features/mfcc.pkl.gz"
+path_to_mfcc_features = '../data/features/mfcc.pkl.gz'
 mfcc = features.Feature.visualize(path_to_mfcc_features)
 
 learning_rate = 0.13
 n_epochs = 100
-
 batch_size = 100000
 
 datasets = features.load_features(mfcc)
@@ -34,8 +33,8 @@ n_test_batches = test_set_x.get_value(borrow=True).shape[0]
 INN = 20
 
 index = T.lscalar()
-x = T.matrix("x")
-y = T.ivector("y")
+x = T.matrix('x')
+y = T.ivector('y')
 
 classifier = LogisticRegression(input=x, n_in=INN, n_out=2)
 cost = classifier.negative_log_likelihood(y)
@@ -61,17 +60,14 @@ validate_model = theano.function(
 g_W = T.grad(cost=cost, wrt=classifier.W)
 g_b = T.grad(cost=cost, wrt=classifier.b)
 
-updates = [(classifier.W, classifier.W - learning_rate * g_W),
-           (classifier.b, classifier.b - learning_rate * g_b)]
+updates = [(classifier.W, classifier.W - learning_rate * g_W), (classifier.b, classifier.b - learning_rate * g_b)]
 
 train_model = theano.function(
     inputs=[index],
     outputs=cost,
     updates=updates,
-    givens={
-        x: train_set_x[index * batch_size: (index + 1) * batch_size],
-        y: train_set_y[index * batch_size: (index + 1) * batch_size]
-    }
+    givens={x: train_set_x[index * batch_size: (index + 1) * batch_size],
+            y: train_set_y[index * batch_size: (index + 1) * batch_size]}
 )
 
 patience = 5000
@@ -88,42 +84,37 @@ epoch = 0
 this_validation_loss = []
 eer = []
 while (epoch < n_epochs) and (not done_looping):
-    epoch = epoch + 1
+    epoch += 1
     for minibatch_index in range(n_train_batches):
         train_model(minibatch_index)
         iteration = (epoch - 1) * n_train_batches + minibatch_index
 
         if (iteration + 1) % validation_frequency == 0:
-            validation_losses = [validate_model(i)
-                                 for i in range(n_valid_batches)]
+            validation_losses = [validate_model(i) for i in range(n_valid_batches)]
             validation_losses = numpy.mean(validation_losses)
             this_validation_loss = validation_losses
 
-            print("Looping")
+            print('Looping')
 
-            print("Epoch %i, minibatch %i%i, validation error %f %%" %
+            print('Epoch %i, minibatch %i%i, validation error %f %%' %
                   (epoch, minibatch_index + 1, n_train_batches,
                    this_validation_loss * 100.))
 
             if this_validation_loss < best_validation_loss:
-                if this_validation_loss < best_validation_loss * \
-                        improvement_threshold:
+                if this_validation_loss < best_validation_loss * improvement_threshold:
                     patience = max(patience, iteration * patience_increase)
 
                 best_validation_loss = this_validation_loss
 
-                p_values = [test_model(i)
-                            for i in range(1)]
+                p_values = [test_model(i) for i in range(1)]
 
                 fixed_scores, _ = fix_scores(p_values)
                 mean_of_scores = mean_of_frames(fixed_scores, _)
-                score_file, this_eer = create("frame_wise_score.txt",
-                                              mean_of_scores)
+                score_file, this_eer = create('frame_wise_score.txt', mean_of_scores)
 
                 eer.append(this_eer)
 
-                print(("Epoch %i , minibatch %i%i, test eer of best model %f"
-                       "%%") %
+                print(('Epoch %i , minibatch %i%i, test eer of best model %f %%') %
                       (epoch, minibatch_index + 1, n_train_batches, this_eer))
 
         if patience <= iteration:
