@@ -6,7 +6,7 @@ from keras.layers import Activation, Dense, Dropout
 from keras.models import Sequential
 
 import source.scoring as scoring
-from source.helpers import load_excel, read_data, save_data, save_excel
+from source.data_io_utils import load_excel, read_data, save_data, save_excel
 
 
 def create_network(n_dense, input_shape, dense_units, activation, dropout, dropout_rate,

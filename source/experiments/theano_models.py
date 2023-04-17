@@ -18,7 +18,7 @@ class UBM(object):
         self.path = "/SIDEKIT/"
         self.server = sidekit.FeaturesServer(
             features_extractor=None,
-            feature_filename_structure=self.path + "train/" + "{}.h5",
+            feature_filename_structure=f"{self.path}train/" + "{}.h5",
             sources=None,
             dataset_list=["cep"],
             mask=None,
@@ -34,7 +34,8 @@ class UBM(object):
             context=None,
             traps_dct_nb=None,
             rasta=False,
-            keep_all_features=True)
+            keep_all_features=True,
+        )
 
     def split(self):
         self.genuine.EM_split(
@@ -47,7 +48,7 @@ class UBM(object):
             save_partial=True,
             ceil_cov=10,
             floor_cov=1e-2)
-        self.genuine.write(self.path + "ubm/genuine.h5")
+        self.genuine.write(f"{self.path}ubm/genuine.h5")
 
         self.spoof.EM_split(
             features_server=self.server,
@@ -59,7 +60,7 @@ class UBM(object):
             save_partial=True,
             ceil_cov=10,
             floor_cov=1e-2)
-        self.spoof.write(self.path + "ubm/spoof.h5")
+        self.spoof.write(f"{self.path}ubm/spoof.h5")
 
 
 class LogisticRegression(object):
@@ -159,27 +160,33 @@ class DeepMLP(object):
                                          n_in=n_in,
                                          n_out=n_hidden[0],
                                          activation=theano.tensor.nnet.relu)]
-        for i in range(1, n_hidden_layers):
-            self.hiddenLayers.append(HiddenLayer(rng=rng,
-                                                 _input=self.hiddenLayers[
-                                                     i - 1].output,
-                                                 n_in=n_hidden[i - 1],
-                                                 n_out=n_hidden[i],
-                                                 activation=t.tanh))
-
+        self.hiddenLayers.extend(
+            HiddenLayer(
+                rng=rng,
+                _input=self.hiddenLayers[i - 1].output,
+                n_in=n_hidden[i - 1],
+                n_out=n_hidden[i],
+                activation=t.tanh,
+            )
+            for i in range(1, n_hidden_layers)
+        )
         self.logRegressionLayer = \
-            LogisticRegression(_input=self.hiddenLayers[-1].output,
+                        LogisticRegression(_input=self.hiddenLayers[-1].output,
                                n_in=n_hidden[-1],
                                n_out=n_out)
 
-        self.L1 = (sum([abs(h1.w).sum() for h1 in self.hiddenLayers])
-                   + abs(self.logRegressionLayer.W).sum())
+        self.L1 = (
+            sum(abs(h1.w).sum() for h1 in self.hiddenLayers)
+            + abs(self.logRegressionLayer.W).sum()
+        )
 
-        self.L2_sqr = (sum([(h1.w ** 2).sum() for h1 in self.hiddenLayers])
-                       + (self.logRegressionLayer.W ** 2).sum())
+        self.L2_sqr = (
+            sum((h1.w**2).sum() for h1 in self.hiddenLayers)
+            + (self.logRegressionLayer.W**2).sum()
+        )
 
         self.negative_log_likelihood = \
-            self.logRegressionLayer.negative_log_likelihood
+                        self.logRegressionLayer.negative_log_likelihood
 
         self.errors = self.logRegressionLayer.errors
         self.params = self.logRegressionLayer.params

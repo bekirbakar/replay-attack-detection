@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 import gzip
+import itertools
 import json
 import os
 import pickle
-from _pickle import dump
 from math import ceil
 
 import h5py
@@ -12,16 +11,15 @@ import numpy
 import numpy as np
 import sidekit
 import soundfile
+from _pickle import dump
+from datasets import ASVspoof
+from helpers import matrix_to_vector
 from obspy.signal.util import enframe, next_pow_2
+from preprocessing import split_frames
 from python_speech_features.sigproc import preemphasis
 from scipy.fftpack.realtransforms import dct
-from sidekit.frontend.features import power_spectrum, framing, trfbank
+from sidekit.frontend.features import framing, power_spectrum, trfbank
 from sidekit.frontend.vad import pre_emphasis
-
-from datasets import ASVspoof
-from helpers import change_working_dir
-from helpers import matrix_to_vector
-from preprocessing import split_frames
 
 
 def load_features(feature_type, subset="", asarray=True, split=False):
@@ -38,7 +36,7 @@ def load_features(feature_type, subset="", asarray=True, split=False):
         x_data, y_data, labels, indexes, batch_size and  file_list.
     """
     # Get config file to read feature directory.
-    change_working_dir("config")
+    os.chdir("config")
 
     # Load file.
     with open("file_structure.json", "r") as fp:
@@ -48,18 +46,18 @@ def load_features(feature_type, subset="", asarray=True, split=False):
     # Check if feature folder exist.
     try:
         os.path.isdir(feature_dir)
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         assertion_text = "\nFeature folder not found."
-        raise AssertionError(assertion_text)
+        raise AssertionError(assertion_text) from e
     path_to_feats = feature_dir + feature_type + "/" + subset
-    change_working_dir("code")
+    os.chdir("code")
 
     # Load data.
     labels = []
     x_data = []
     files = os.listdir(path_to_feats)
     for file in files:
-        with open(path_to_feats + "/" + file, "rb+") as fp:
+        with open(f"{path_to_feats}/{file}", "rb+") as fp:
             pickled_data = pickle.load(fp)
             x_data.append(pickled_data[0])
             labels.append(pickled_data[1])
@@ -80,11 +78,7 @@ def load_features(feature_type, subset="", asarray=True, split=False):
     y_data = keras.utils.to_categorical(np.asarray(y_data), 2)
 
     # Determine min batch size.
-    if len(x_data) > 10000:
-        batch_size = len(x_data) // 100
-    else:
-        batch_size = len(x_data)
-
+    batch_size = len(x_data) // 100 if len(x_data) > 10000 else len(x_data)
     # File list.
     file_list = ASVspoof(subset).file_list
 
@@ -114,19 +108,16 @@ def fix_features(method, feats):
     if method == "1":
         # Find length of feats.
         feat_lengths = numpy.zeros([len(feats)], dtype=int)
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             feat_lengths[i] = len(feats[i])
         min_len = feat_lengths.min  # ()
 
         # Crop every row that has longer than minimum length.
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             fixed_feats.append(matrix_to_vector(feats[i]))
-            fixed_feats[i] = fixed_feats[i][0:min_len]
+            fixed_feats[i] = fixed_feats[i][:min_len]
     elif method == "2":
-        # Find mean value of feat lengths.
-        feat_lengths = []
-        for i in range(0, len(feats)):
-            feat_lengths.append(len(feats[i]))
+        feat_lengths = [len(feats[i]) for i in range(len(feats))]
         mean_of_len = ceil(sum(feat_lengths) / len(feats))
 
         # Find ceps number.
@@ -134,7 +125,7 @@ def fix_features(method, feats):
 
         # Scale every row to mean value of length by cropping longer and
         # adding values(from first values) to smaller ones.
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             buffer = numpy.zeros([mean_of_len, ceps_number], dtype=float)
 
             # Find how many missing value in feats.
@@ -149,19 +140,19 @@ def fix_features(method, feats):
                 missing = (-1) * missing
 
                 # Fill with first values.
-                for j in range(0, ceps_number):
+                for j in range(ceps_number):
                     buffer[j, 0:missing] = feat[j, 0:missing]
 
                 # Get another values.
-                buffer[missing:len(buffer)] = feat[:]
+                buffer[missing:] = feat[:]
             elif missing > 0:  # If there are more values.
                 # Fill with first values.
-                for j in range(0, ceps_number):
+                for j in range(ceps_number):
                     buffer[j, :] = feat[j, 0:mean_of_len]
             fixed_feats.append(buffer)
     elif method == "3":
         # Convert matrix to vector.
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             buffer = feats[i]
             buffer = matrix_to_vector(buffer)
             fixed_feats.append(buffer)
@@ -185,14 +176,13 @@ def feature_normalization(feat):
     sigma = numpy.std(feat)
     if len(feat.shape) == 1:
         normalized_feat = numpy.zeros([len(feat)], dtype=float)
-        for i in range(0, len(feat)):
+        for i in range(len(feat)):
             normalized_feat[i] = (feat[i] - mu) / sigma
     else:
         normalized_feat = numpy.zeros([feat.shape[0], feat.shape[1]],
                                       dtype=float)
-        for i in range(0, feat.shape[0]):
-            for j in range(0, feat.shape[1]):
-                normalized_feat[i][j] = (feat[i][j] - mu) / sigma
+        for i, j in itertools.product(range(feat.shape[0]), range(feat.shape[1])):
+            normalized_feat[i][j] = (feat[i][j] - mu) / sigma
 
     return normalized_feat
 
@@ -234,7 +224,7 @@ def long_term_spectra(x, fs):
     ltas = numpy.zeros([no_win, int(n_fft / 2) + 1], dtype=float)
 
     # N point fft of signal.
-    for i in range(0, no_win):
+    for i in range(no_win):
         y = frames[i, :]
         y = abs(numpy.fft.fft(y, n_fft))
         ltas[i, :] = y[1:int(n_fft / 2) + 2]
@@ -245,7 +235,7 @@ def long_term_spectra(x, fs):
     feats = numpy.zeros([n_fft], dtype=float)
 
     # Feats: Mean and standard deviation of ltas.
-    for i in range(0, int(n_fft / 2)):
+    for i in range(int(n_fft / 2)):
         ltas_log = numpy.log([ltas[:, i] + eps])
         mu[i] = numpy.mean(ltas_log)
         sigma[i] = numpy.std(ltas_log)
@@ -284,9 +274,7 @@ def extract_frames(input_sig, fs=16000, win_time=0.02, shift_time=0.01):
 
     # Windowing.
     window = np.hamming(window_len)
-    windowed_sig = framed_sig * window
-
-    return windowed_sig
+    return framed_sig * window
 
 
 def mfcc(input_sig, lowfreq=100, maxfreq=8000, nlinfilt=0, nlogfilt=24,
@@ -309,9 +297,7 @@ def mfcc(input_sig, lowfreq=100, maxfreq=8000, nlinfilt=0, nlogfilt=24,
     # Use the DCT to "compress" the coefficients (spectrum -> cepstrum domain)
     # The C0 term is removed as it is the constant term.
     ceps = dct(mspec, type=2, norm="ortho", axis=-1)[:, 1:nceps + 1]
-    result = list()
-    result.append(ceps)
-    result.append(log_energy)
+    result = [ceps, log_energy]
     if get_spec:
         result.append(spec)
     else:
@@ -370,19 +356,19 @@ class Feature(object):
             keep_all_features=False)
 
         # Extract features for genuine and spoof for data.
-        for i in range(0, len(self.obj.file_list)):
+        for i in range(len(self.obj.file_list)):
             extractor.save(self.obj.file_list[i])
 
     def extract(self, file_path, path_to_file, f_type, fs=16000, shift=0.01,
                 d=1, p=3,
                 k=7, left_ctx=12, right_ctx=12, win_time=0.025, f_n=True):
         # Read audio files and store into x list.
-        for i in range(0, len(self.obj.file_list)):
+        for i in range(len(self.obj.file_list)):
             self.x.append(soundfile.read(
                 self.obj.path_to_wav + self.obj.file_list[i] + ".wav")[0])
 
         # Extract selected method to data in x.
-        for i in range(0, len(self.obj.file_list)):
+        for i in range(len(self.obj.file_list)):
             if "mfcc" in f_type:
                 """
                 mfcc = sidekit.frontend.features.mfcc(self.x[i],
@@ -399,22 +385,22 @@ class Feature(object):
                                                       prefac=prefac)[0]  
                 """
                 # self.obj.subset + "/"
-                filename = self.obj.protocol[i, 0][0:9]
+                filename = self.obj.protocol[i, 0][:9]
                 file = h5py.File((file_path + filename + ".h5"), "r+")
                 # noinspection PyUnresolvedReferences
                 feats = sidekit.frontend.io.read_dict_hdf5(path_to_file)
                 file.close()
-                msvc_feats = feats[filename + str("/cep")]
+                mfcc_feats = feats[f"{filename}/cep"]
 
                 if f_type == "mfcc":
-                    feats = msvc_feats
+                    feats = mfcc_feats
                 elif f_type == "mfcc_sdc":
                     feats = sidekit.frontend.features.shifted_delta_cepstral(
-                        msvc_feats, d=d,
+                        mfcc_feats, d=d,
                         p=p, k=k)
                 elif f_type == "mfcc_pca_dct":
                     feats = sidekit.frontend.features.pca_dct(
-                        msvc_feats,
+                        mfcc_feats,
                         left_ctx=left_ctx,
                         right_ctx=right_ctx,
                         p=None)
@@ -431,18 +417,14 @@ class Feature(object):
             # Normalize feat.
             if f_n is True:
                 feats = feature_normalization(feats)
-            else:
-                pass
-
             # Append to the feats list.
             self.feats.append(feats)
 
         return self.feats, self.obj.labels
 
     def write_to_h5(self, feats, feats_dir):
-        for i in range(0, len(self.obj.file_list)):
-            f = h5py.File(feats_dir + "/" + self.obj.file_list[i] + ".h5",
-                          "w+")
+        for i in range(len(self.obj.file_list)):
+            f = h5py.File(f"{feats_dir}/{self.obj.file_list[i]}.h5", "w+")
             sidekit.frontend.io.write_hdf5(
                 show=self.obj.file_list[i],
                 fh=f,
@@ -475,13 +457,13 @@ class Feature(object):
         """
         feats = []
         labels = obj.labels
-        for i in range(0, len(obj.file_list)):
-            filename = obj.protocol[i, 0][0:9]
+        for i in range(len(obj.file_list)):
+            filename = obj.protocol[i, 0][:9]
             file = h5py.File(hdf_file_path, "r+")
             # noinspection PyUnresolvedReferences
             feat = sidekit.frontend.io.read_dict_hdf5(hdf_file_path)
             file.close()
-            feats.append(feat[filename + str("/cep")])
+            feats.append(feat[f"{filename}/cep"])
 
         return feats, labels
 

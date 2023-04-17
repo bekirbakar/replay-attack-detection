@@ -1,21 +1,19 @@
+# General OS Files
 **/.DS_Store
 
+# Editor Files
 **/.idea
 **/.vscode
-**/__pycache__
 
+# Python cache and virtual environment.
+**/__pycache__
 venv/**
 
+# Data directories
 data/corpus/**
-data/excel_files/**
+data/excel_Files/**
 data/features/**
 data/models/**
 
-matlab/eer_bosaris.m
-matlab/eer_detplot.m
-matlab/hp_filter.m
-
-scripts/**
-snippets/**
-
-hidden-files/**
+# Hidden Files
+hidden-Files/**

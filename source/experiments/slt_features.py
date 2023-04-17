@@ -17,8 +17,8 @@ from obspy.signal.util import enframe, next_pow_2
 from python_speech_features.sigproc import preemphasis
 from scipy import signal
 
-from source.datasets import ASVspoof
-from source.helpers import flush_process_info, clear_dir
+from source.asvspoof_data import ASVspoof
+from source.data_io_utils import flush_process_info, clear_dir
 
 with open("./config/datasets.json") as fh:
     dataset_config = json.loads(fh.read())
@@ -39,7 +39,7 @@ def mvn(feat):
         norm_feat /= sigma
     else:
         norm_feat = np.zeros([feat.shape[0], feat.shape[1]], dtype=float)
-        for i in range(0, feat.shape[1]):
+        for i in range(feat.shape[1]):
             mu = np.mean(feat[:, i])
             sigma = np.std(feat[:, i])
             norm_feat[:, i] = (feat[:, i] - mu) / sigma
@@ -56,16 +56,13 @@ def ltas(x, nfft, fs=16000, fc=None):
 
     # Calculate frame and shift length in terms of samples.
     frame_len = int((20 * fs) / 1000)
-    frame_step = int(frame_len / 2)
+    frame_step = frame_len // 2
 
     # Apply hamming window and split signal into frames.
-    frames, _, _ = enframe(x + eps, np.hamming(frame_len), int(frame_step))
+    frames, _, _ = enframe(x + eps, np.hamming(frame_len), frame_step)
 
     # Crop low frequencies.
-    if fc is not None:
-        start = int((fc * nfft) / fs)
-    else:
-        start = 1
+    start = int((fc * nfft) / fs) if fc is not None else 1
     end = int(nfft / 2)
     length = int(end - start)
 
@@ -84,9 +81,7 @@ def ltas(x, nfft, fs=16000, fc=None):
     # Concatenate mean and variance statistics.
     mu = np.mean(spectrum, axis=0)
     sigma = np.std(spectrum, axis=0)
-    feat = np.concatenate((mu, sigma), axis=0)
-
-    return feat
+    return np.concatenate((mu, sigma), axis=0)
 
 
 # noinspection DuplicatedCode
@@ -94,7 +89,7 @@ def split_frames(feats, labels):
     # Get info, length of every mXn dimensional list element.
     count = 0
     info = []
-    for i in range(0, len(feats)):
+    for i in range(len(feats)):
         info.append(feats[i].shape[0])
         count += info[i]
 
@@ -103,26 +98,26 @@ def split_frames(feats, labels):
     y = []  # Declare y to store labels.
     index = 0
     j = 0
-    for i in range(0, len(feats)):
+    for i in range(len(feats)):
         # Store data into buffer.
         index += j
         buffer = feats[i]
 
         # Append data into x and labels into y.
-        for j in range(0, len(buffer)):
+        for j in range(len(buffer)):
             x.append(buffer[j])
             y.append(labels[i])
         j += 1
         flush_process_info("Completed.", i, len(feats))
 
-    return tuple((x, y, info))
+    return x, y, info
 
 
 def reverse_arr(arr):
     x = arr.shape[1]
     y = arr.shape[0]
     ret_arr = np.zeros([x, y], dtype=float)
-    for i in range(0, x):
+    for i in range(x):
         ret_arr[i] = arr[:, i]
 
     return ret_arr
@@ -152,7 +147,7 @@ def ltss(subset_list, normalize=False):
 
         # Extract features.
         feats = []
-        for file in range(0, len(file_list)):
+        for file in range(len(file_list)):
             x, fs = sf.read(path_to_wav + file_list[file] + ".wav")
             feat = ltas(x, nfft=1024, fc=4000)
 
@@ -163,7 +158,7 @@ def ltss(subset_list, normalize=False):
             # Append data into the list.
             feats.append(feat)
             flush_process_info("Completed.", file, len(file_list))
-        data = tuple((feats, labels))
+        data = feats, labels
 
         # Change directory.
         wor_dir = os.getcwd()
@@ -278,7 +273,7 @@ def split_feats(feats, labels):
     # Get info, length of every mXn dimensional list element.
     count = 0
     info = []
-    for i in range(0, len(feats)):
+    for i in range(len(feats)):
         info.append(feats[i].shape[0])
         count += info[i]
 
@@ -287,19 +282,19 @@ def split_feats(feats, labels):
     y = []  # Declare y to store labels.
     index = 0
     j = 0
-    for i in range(0, len(feats)):
+    for i in range(len(feats)):
         # Store data into buffer.
         index += j
         buffer = feats[i]
 
         # Append data into x and labels into y.
-        for j in range(0, len(buffer)):
+        for j in range(len(buffer)):
             x.append(buffer[j])
             y.append(labels[i])
         j += 1
         flush_process_info("Completed.", i, len(feats))
 
-    return tuple((x, y, info))
+    return x, y, info
 
 
 def matrix_to_vector(matrix):
@@ -344,21 +339,18 @@ def fix_features(method, feats):
     if method == "1":
         # Find length of feats.
         feat_lengths = np.zeros([len(feats)], dtype=int)
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             feat_lengths[i] = len(feats[i])
         # noinspection PyArgumentList
         min_len = feat_lengths.min()
 
         # Crop every row that has longer than minimum length.
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             fixed_feats.append(matrix_to_vector(feats[i]))
-            fixed_feats[i] = fixed_feats[i][0:min_len]
+            fixed_feats[i] = fixed_feats[i][:min_len]
             flush_process_info("Completed.", i, len(feats))
     elif method == "2":
-        # Find mean value of feat lengths.
-        feat_lengths = []
-        for i in range(0, len(feats)):
-            feat_lengths.append(len(feats[i]))
+        feat_lengths = [len(feats[i]) for i in range(len(feats))]
         mean_of_len = ceil(sum(feat_lengths) / len(feats))
 
         # Find ceps number.
@@ -366,7 +358,7 @@ def fix_features(method, feats):
 
         # Scale every row to mean value of length by cropping longer and
         # adding values(from first values) to smaller ones.
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             buffer = np.zeros([mean_of_len, ceps_number], dtype=float)
 
             # Find how many missing value in feats.
@@ -381,21 +373,20 @@ def fix_features(method, feats):
                 missing = (-1) * missing
 
                 # Fill with first values.
-                for j in range(0, ceps_number):
+                for j in range(ceps_number):
                     buffer[j, 0:missing] = feat[j, 0:missing]
 
                 # Get another values.
-                buffer[missing:len(buffer)] = feat[:]
-            # If there are more values.
+                buffer[missing:] = feat[:]
             elif missing > 0:
                 # Fill with first values.
-                for j in range(0, ceps_number):
+                for j in range(ceps_number):
                     buffer[j, :] = feat[j, 0:mean_of_len]
             fixed_feats.append(buffer)
             flush_process_info("Completed.", i, len(feats))
     elif method == "3":
         # Convert matrix to vector.
-        for i in range(0, len(feats)):
+        for i in range(len(feats)):
             buffer = feats[i]
             buffer = matrix_to_vector(buffer)
             fixed_feats.append(buffer)
@@ -411,14 +402,14 @@ def feature_normalization(feat):
         mu = np.mean(feat)
         sigma = np.std(feat)
         normalized_feat = np.zeros([len(feat)], dtype=float)
-        for i in range(0, len(feat)):
+        for i in range(len(feat)):
             normalized_feat[i] = (feat[i] - mu) / sigma
     else:
         normalized_feat = np.zeros([feat.shape[0], feat.shape[1]], dtype=float)
-        for i in range(0, feat.shape[1]):
+        for i in range(feat.shape[1]):
             mu = np.mean(feat[:, i])
             sigma = np.std(feat[:, i])
-            for j in range(0, feat.shape[0]):
+            for j in range(feat.shape[0]):
                 normalized_feat[j][i] = (feat[j][i] - mu) / sigma
 
     return normalized_feat
@@ -460,7 +451,7 @@ def long_term_spectra(x, fs):
     ltas_ = np.zeros([no_win, int(nfft / 2) + 1], dtype=float)
 
     # N point fft of signal.
-    for i in range(0, no_win):
+    for i in range(no_win):
         y = frames[i, :]
         abs_y = abs(np.fft.fft(y, nfft))
         ltas_[i, :] = abs_y[1:int(nfft / 2) + 2]
@@ -471,7 +462,7 @@ def long_term_spectra(x, fs):
     feat = np.zeros([nfft], dtype=float)
 
     # Feats: Mean and standard deviation of ltas.
-    for i in range(0, int(nfft / 2)):
+    for i in range(int(nfft / 2)):
         ltas_log = np.log([ltas_[:, i] + eps])
         mu[i] = np.mean(ltas_log)
         sigma[i] = np.std(ltas_log)
@@ -547,12 +538,9 @@ def deep_features(feature_list, dataset_index, subset_list):
             # Convert data types to float32.
             data = data.astype("float32")
             # Loop through files.
-            for file in range(0, len(file_list)):
+            for file in range(len(file_list)):
                 # Extract features from intermediate layer.
-                if feature == "ltas":
-                    buffer = data[file:(file + 1)]
-                else:
-                    buffer = data[start:end]
+                buffer = data[file:(file + 1)] if feature == "ltas" else data[start:end]
                 intermediate_output = intermediate_layer_model.predict(buffer)
                 # Save feature per file.
                 mdict = {"data": intermediate_output}
@@ -560,7 +548,7 @@ def deep_features(feature_list, dataset_index, subset_list):
                                  appendmat=True, format="5",
                                  long_field_names=False, do_compression=False,
                                  oned_as="row")
-                if feature is not "ltas":
+                if feature != "ltas":
                     start = end
                     end = indexes[file] + start
         # Delete model to release gpu memory.
@@ -578,32 +566,28 @@ def load_deep_feat(dataset, subset_list):
         dataset_config["ASVspoof 2017"][subset_list[0]]["path_to_protocol"],
         dataset_config["ASVspoof 2017"][subset_list[0]]["path_to_wav"],
     ).file_list
-    mat_data = scipy.io.loadmat(mat_file + file_list[1000])["data"]
-
-    return mat_data
+    return scipy.io.loadmat(mat_file + file_list[1000])["data"]
 
 
 def extract_features(feature_list, subset_list):
     # Select params for feature types.
     # Feature_type, normalization, filter, context, frame_wise.
-    for i in range(0, len(feature_list)):
+    for i in range(len(feature_list)):
         f_type = feature_list[i]
         path = "../../data/features/" + f_type.upper() + "/"
         file = path + f_type
         # Select params for feature types.
         # normalization, filter, context, frame_wise.
-        if f_type is "ltas":
+        if f_type == "ltas":
             params = [True, False, False, False]
-        elif f_type is "mfcc":
+        elif f_type in ["mfcc", "power_spectrum"]:
             params = [True, False, False, True]
-        elif f_type is "power_spectrum":
-            params = [True, False, False, True]
-        elif f_type is "frames":
+        elif f_type == "frames":
             params = [False, False, False, True]
         else:
             raise AssertionError("Feature type not found.")
         # Loop through feature list.
-        for j in range(0, len(subset_list)):
+        for j in range(len(subset_list)):
             s = subset_list[i]
             subset = ASVspoof(
                 2017, subset_list[j],
@@ -615,10 +599,7 @@ def extract_features(feature_list, subset_list):
                                                     f_n=params[0],
                                                     apply_filter=params[1],
                                                     context=params[2])
-            if params[3] is True:
-                data = split_feats(feats, labels)
-            else:
-                data = tuple((feats, labels))
+            data = split_feats(feats, labels) if params[3] is True else (feats, labels)
             joblib.dump(data, file + "_" + subset_list[j])
             del data, feats, labels
 
@@ -688,7 +669,7 @@ class Feature(object):
         clear_dir("../../data/features/SIDEKIT/" + self.obj.subset + "/",
                   ".h5")
         # Extract and save features.
-        for i in range(0, len(self.obj.file_list)):
+        for i in range(len(self.obj.file_list)):
             self.extractor.save(self.obj.file_list[i])
             flush_process_info("Completed.", i, len(self.obj.file_list))
 
@@ -709,7 +690,7 @@ class Feature(object):
             Features and labels.
         """
         # Extract selected method to data in x.
-        for i in range(0, len(self.obj.file_list)):
+        for i in range(len(self.obj.file_list)):
             x = sf.read(self.obj.path_to_wav + self.obj.file_list[i] + ".wav")[
                 0]
             # print(str(self.obj.path_to_wav) + str(self.obj.file_list[i]) +
@@ -722,7 +703,7 @@ class Feature(object):
             if apply_filter is True:
                 x = high_pass_filter(x)
             # Feature extraction.
-            if f_type is "mfcc":
+            if f_type == "mfcc":
                 mfcc_ = sidekit.frontend.features.mfcc(x,
                                                        lowfreq=6000,
                                                        maxfreq=8000,
@@ -737,10 +718,7 @@ class Feature(object):
                                                        prefac=0.97)
                 # Add log-energy as first coefficient.
                 mfcc_ = np.insert(mfcc_[0], 0, values=mfcc_[1], axis=1)
-                if context is True:
-                    feat = self.server.get_context(mfcc_)[0]
-                else:
-                    feat = mfcc_
+                feat = self.server.get_context(mfcc_)[0] if context is True else mfcc_
             elif f_type == "ltas":
                 feat = long_term_spectra(x, fs)
             elif f_type == "power_spectrum":

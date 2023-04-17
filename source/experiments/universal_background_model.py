@@ -2,7 +2,7 @@
 import numpy
 import sidekit
 
-import source.helpers as helpers
+import source.data_io_utils as data_io_utils
 
 # Environment Variables
 path_to_database = ""
@@ -14,27 +14,23 @@ protocol = numpy.genfromtxt(train_protocol_file, delimiter=" ", dtype=str)
 
 # Get File Lists
 file_list = []
-for i in range(0, len(protocol)):
+for i in range(len(protocol)):
     buffer = protocol[i, 0]
-    file_list.append(buffer[0:9])
+    file_list.append(buffer[:9])
 
-# Get Labels
-labels = []
-for i in range(0, len(protocol)):
-    labels.append(protocol[i, 1])
-
+labels = [protocol[i, 1] for i in range(len(protocol))]
 # Indices of Genuine and Spoof Files
 genuineIdx = []
 spoofIdx = []
-for i in range(0, len(labels)):
+for i in range(len(labels)):
     if "genuine" in labels[i]:
         genuineIdx.append(i)
     elif "spoof" in labels[i]:
         spoofIdx.append(i)
 
 extractor = sidekit.FeaturesExtractor(
-    audio_filename_structure=path_to_database + "train/" + "{}.wav",
-    feature_filename_structure=path_to_database + "train/feat/" + "{}.h5",
+    audio_filename_structure=f"{path_to_database}train/" + "{}.wav",
+    feature_filename_structure=f"{path_to_database}train/feat/" + "{}.h5",
     sampling_frequency=16000,
     lower_frequency=0,
     higher_frequency=8000,
@@ -47,12 +43,12 @@ extractor = sidekit.FeaturesExtractor(
     snr=40,
     pre_emphasis=0.97,
     save_param=["cep"],
-    keep_all_features=True
+    keep_all_features=True,
 )
 
 server = sidekit.FeaturesServer(
     features_extractor=None,
-    feature_filename_structure=path_to_database + "train/feat/" + "{}.h5",
+    feature_filename_structure=f"{path_to_database}train/feat/" + "{}.h5",
     sources=None,
     dataset_list=["cep"],
     mask=None,
@@ -68,34 +64,27 @@ server = sidekit.FeaturesServer(
     context=None,
     traps_dct_nb=None,
     rasta=False,
-    keep_all_features=True
+    keep_all_features=True,
 )
 
 # Delete old files in directory.
-helpers.delete_files(path_to_database + "train/feat", ".h5")
+data_io_utils.delete_files(f"{path_to_database}train/feat", ".h5")
 
 # Extract features for GENUINE training data and store.
-for i in range(0, int(len(genuineIdx))):
-    extractor.save(file_list[genuineIdx[i]])
+for item__ in genuineIdx:
+    extractor.save(file_list[item__])
 
 # Extract features for SPOOF training data and store.
-for i in range(0, int(len(spoofIdx))):
-    extractor.save(file_list[spoofIdx[i]])
+for item___ in spoofIdx:
+    extractor.save(file_list[item___])
 
-# UBM
-ubm_genuine_list = []
-for i in range(0, len(genuineIdx)):
-    ubm_genuine_list.append(file_list[genuineIdx[i]])
-
-ubm_spoof_list = []
-for i in range(0, len(spoofIdx)):
-    ubm_spoof_list.append(file_list[spoofIdx[i]])
-
+ubm_genuine_list = [file_list[item] for item in genuineIdx]
+ubm_spoof_list = [file_list[item_] for item_ in spoofIdx]
 ubm = sidekit.Mixture()
 spoof = sidekit.Mixture()
 
 # Delete old files in directory.
-helpers.delete_files(path_to_database + "train/feat/ubm", ".h5")
+data_io_utils.delete_files(f"{path_to_database}train/feat/ubm", ".h5")
 
 ubm.EM_split(features_server=server,
              feature_list=ubm_genuine_list,
@@ -106,7 +95,7 @@ ubm.EM_split(features_server=server,
              save_partial=True,
              ceil_cov=10,
              floor_cov=1e-2)
-ubm.write(path_to_database + "train/feat/ubm/genuine.h5")
+ubm.write(f"{path_to_database}train/feat/ubm/genuine.h5")
 
 spoof.EM_split(features_server=server,
                feature_list=ubm_spoof_list,
@@ -117,30 +106,26 @@ spoof.EM_split(features_server=server,
                save_partial=True,
                ceil_cov=10,
                floor_cov=1e-2)
-spoof.write(path_to_database + "train/feat/ubm/spoof.h5")
+spoof.write(f"{path_to_database}train/feat/ubm/spoof.h5")
 
 # Development protocol.
 protocol = numpy.genfromtxt(dev_protocol_file, delimiter=" ", dtype=str)
 
 # Get file list.
 file_list = []
-for i in range(0, len(protocol)):
+for i in range(len(protocol)):
     buffer = protocol[i, 0]
-    file_list.append(buffer[0:9])
+    file_list.append(buffer[:9])
 
-# Get label list.
-labels = []
-for i in range(0, len(protocol)):
-    labels.append(protocol[i, 1])
-
+labels = [protocol[i, 1] for i in range(len(protocol))]
 # Feature server, extractor  attributes for training data.
-extractor.audio_filename_structure = path_to_database + "dev/" + "{}.wav"
-extractor.feature_filename_structure = path_to_database + "dev/feat/" + "{}.h5"
-server.feature_filename_structure = path_to_database + "dev/feat/" + "{}.h5"
+extractor.audio_filename_structure = f"{path_to_database}dev/" + "{}.wav"
+extractor.feature_filename_structure = f"{path_to_database}dev/feat/" + "{}.h5"
+server.feature_filename_structure = f"{path_to_database}dev/feat/" + "{}.h5"
 
 # Delete old files in directory.
-helpers.delete_files(path_to_database + "dev/feat", ".h5")
+data_io_utils.delete_files(f"{path_to_database}dev/feat", ".h5")
 
 # Process each development trial.
-for i in range(0, len(file_list)):
-    extractor.save(file_list[i])
+for file in file_list:
+    extractor.save(file)

@@ -9,8 +9,8 @@ from keras.layers.normalization import BatchNormalization
 from keras.models import Sequential
 
 from slt_scores import scoring, save
-from source.datasets import ASVspoof
-from source.helpers import load_excel, save_excel
+from source.asvspoof_data import ASVspoof
+from source.data_io_utils import load_excel, save_excel
 
 with open("./config/datasets.json") as fh:
     dataset_config = json.loads(fh.read())
