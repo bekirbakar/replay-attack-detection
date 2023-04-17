@@ -31,5 +31,5 @@ The work was done under the project supported by the Scientific and Technologica
 
 ## Resources
 
-<http://www.ee.ic.ac.uk/hp/staff/dmb/voicebox/voicebox.html>
-<https://datashare.is.ed.ac.uk/handle/10283/3055>
+- <http://www.ee.ic.ac.uk/hp/staff/dmb/voicebox/voicebox.html>
+- <https://datashare.is.ed.ac.uk/handle/10283/3055>
