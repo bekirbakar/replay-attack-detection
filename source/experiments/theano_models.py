@@ -1,12 +1,12 @@
 import pickle
 import timeit
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot
 import numpy
 import sidekit
 import theano
-import theano.tensor as t
 import theano.tensor as T
+
 from scoring import calculate_eer, load_data
 
 # These codes adapted from lisa-lab tutorials/repository.
@@ -78,8 +78,8 @@ class LogisticRegression(object):
                                                  dtype=theano.config.floatX),
                                name='b',
                                borrow=True)
-        self.p_y_given_x = t.nnet.softmax(t.dot(_input, self.W) + self.b)
-        self.y_pred = t.argmax(self.p_y_given_x, axis=1)
+        self.p_y_given_x = T.nnet.softmax(T.dot(_input, self.W) + self.b)
+        self.y_pred = T.argmax(self.p_y_given_x, axis=1)
         self.params = [self.W, self.b]
         self.input = _input
 
@@ -87,21 +87,21 @@ class LogisticRegression(object):
         return self.p_y_given_x, y
 
     def negative_log_likelihood(self, y):
-        return -t.mean(t.log(self.p_y_given_x)[t.arange(y.shape[0]), y])
+        return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]), y])
 
     def errors(self, y):
         if y.ndim != self.y_pred.ndim:
             raise TypeError('y should have the same shape as self.y_pred',
                             ('y', y.type, 'y_pred', self.y_pred.type))
         if y.dtype.startswith('int'):
-            return t.mean(t.neq(self.y_pred, y))
+            return T.mean(T.neq(self.y_pred, y))
         else:
             raise NotImplementedError()
 
 
 class HiddenLayer(object):
     def __init__(self, rng, _input, n_in, n_out, w=None, b=None,
-                 activation=t.tanh):
+                 activation=T.tanh):
         self.input = _input
 
         if w is None:
@@ -123,7 +123,7 @@ class HiddenLayer(object):
         self.w = w
         self.b = b
 
-        lin_output = t.dot(_input, self.w) + self.b
+        lin_output = T.dot(_input, self.w) + self.b
 
         self.output = \
             (lin_output if activation is None else activation(lin_output))
@@ -171,7 +171,7 @@ class DeepMLP(object):
                 _input=self.hiddenLayers[i - 1].output,
                 n_in=n_hidden[i - 1],
                 n_out=n_hidden[i],
-                activation=t.tanh,
+                activation=T.tanh,
             )
             for i in range(1, n_hidden_layers)
         )
@@ -210,7 +210,7 @@ def run_experiment():
     n_epochs = 1000
     dataset = 'path-to-feature.pkl.gz'
     batch_size = 500
-    # n_hidden = 512
+    #  n_hidden = 512
 
     datasets = load_data(dataset)
 
@@ -335,4 +335,4 @@ def run_experiment():
                 done_looping = True
                 break
 
-    plt.plot(eer)
+    matplotlib.pyplot.plot(eer)

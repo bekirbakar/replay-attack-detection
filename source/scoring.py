@@ -9,9 +9,9 @@ import math
 from typing import List, Tuple
 
 import numpy
-from detplot import DetPlot
-from sidekit.bosaris.detplot import rocch, rocch2eer
+import sidekit
 
+import detplot
 
 def create_score_file(values: numpy.ndarray, labels: str,
                       file_list: list = None,
@@ -142,8 +142,9 @@ def calculate_eer(data: numpy.ndarray, tar: List[float] = None,
                 raise AssertionError('Some of the values are missing!')
 
     # Calculate equal error rate (eer).
-    pmiss, pfa = rocch(numpy.asarray(tar), numpy.asarray(nontar))
-    eer = rocch2eer(pmiss, pfa) * 100
+    pmiss, pfa = sidekit.bosaris.detplot.rocch(numpy.asarray(tar),
+                                               numpy.asarray(nontar))
+    eer = sidekit.bosaris.detplot.rocch2eer(pmiss, pfa) * 100
 
     return round(eer, 2)
 
@@ -219,7 +220,7 @@ def det_plot(tar: List[float], non_tar: List[float], sys_name: str = '') -> None
     non_tar = numpy.asarray(non_tar)
 
     # Plot the DET curve.
-    dp = DetPlot(plot_title='')
+    dp = detplot.DetPlot(plot_title='')
     dp.set_system(tar, non_tar, sys_name=sys_name)
     dp.create_figure()
     dp.plot_rocch_det(0)

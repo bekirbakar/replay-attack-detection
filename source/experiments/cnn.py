@@ -11,6 +11,7 @@ import numpy
 import scoring
 import features
 
+
 def create_network(input_shape):
     """
     Create a CNN model with the given input shape.
@@ -57,8 +58,9 @@ path_to_model = ''
 # Load training data, development data, and labels.
 feature = 0
 feature_list = ['ltas', 'power_spectrum']
-x_train, y_train, _, _, batch_size, _ = features.load_features(feature_list[feature],
-                                                               'train')
+x_train, y_train, _, _, batch_size, _ = \
+    features.load_features(feature_list[feature],
+                           'train')
 x_test, y_test, test_labels, indexes, _, test_file_list = \
     features.load_features(feature_list[feature], 'dev')
 

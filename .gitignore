@@ -9,11 +9,5 @@
 **/__pycache__
 venv/**
 
-# Data directories
-data/corpus/**
-data/excel_Files/**
-data/features/**
-data/models/**
-
 # Hidden Files
-hidden-Files/**
+hidden-files/**
