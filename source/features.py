@@ -8,7 +8,6 @@ from math import ceil
 import h5py
 import keras
 import numpy
-import numpy as np
 import sidekit
 import soundfile
 from _pickle import dump
@@ -71,11 +70,12 @@ def load_features(feature_type, subset="", asarray=True, split=False):
         y_data = labels
     if asarray is True:
         # Convert to numpy array.
-        x_data = np.vstack(x_data).astype("float32")  # np.asarray(x_data)
+        x_data = numpy.vstack(x_data).astype(
+            "float32")  # numpy.asarray(x_data)
 
     # Represent labels in categorical form.
     # noinspection PyUnresolvedReferences
-    y_data = keras.utils.to_categorical(np.asarray(y_data), 2)
+    y_data = keras.utils.to_categorical(numpy.asarray(y_data), 2)
 
     # Determine min batch size.
     batch_size = len(x_data) // 100 if len(x_data) > 10000 else len(x_data)
@@ -84,8 +84,8 @@ def load_features(feature_type, subset="", asarray=True, split=False):
 
     # Check ""nan" value existence and return data.
     """
-    any_nan = np.isnan(x_data).any()
-    if any_nan is True or any_nan is np.bool_(True):
+    any_nan = numpy.isnan(x_data).any()
+    if any_nan is True or any_nan is numpy.bool_(True):
         raise AssertionError(""nan" value occurred.")
     """
     return x_data, y_data, labels, indexes_, batch_size, file_list
@@ -245,6 +245,67 @@ def long_term_spectra(x, fs):
     return feats
 
 
+def ltas(input_sig, fs=16000, fc=0, win_time=0.02, shift_time=0.01):
+    """
+    Extracts long-term spectral statistics of given speech signal.
+
+    Args:
+        input_sig: Speech signal.
+        fs: Sample rate of the signal.
+        fc: F cut frequency.
+        win_time: Length of the sliding window in seconds.
+        shift_time: Shift between two analyses.
+
+    Returns:
+        Mean and variance statistics of fourier magnitude spectrum.
+    """
+    # Add this value on elements to avoid dividing values to zero.
+    eps = 2.2204e-16
+
+    # Pre-emphasis on signal.
+    input_sig = pre_emphasis(input_sig, 0.97)
+
+    # Calculate frame and overlap length in terms of samples.
+    window_len = int(round(win_time * fs))
+    overlap = window_len - int(shift_time * fs)
+
+    # Split signal into frames.
+    framed_sig = framing(sig=input_sig, win_size=window_len,
+                         win_shift=window_len - overlap,
+                         context=(0, 0), pad="zeros")
+
+    # Windowing.
+    window = numpy.hamming(window_len)
+    windowed_sig = framed_sig * window
+
+    # Number of fft points.
+    n_fft = 2 ** int(numpy.ceil(numpy.log2(window_len)))
+
+    # Low frequency cutting variables.
+    start = 0 if fc == 0 else int((fc * n_fft) / fs)
+    end = int(n_fft / 2) + 1
+    n_elements = int(end - start)
+
+    # A placeholder for spectrum.
+    spectrum = numpy.zeros([framed_sig.shape[0], n_elements])
+
+    # N point FFT of signal.
+    fft = numpy.fft.rfft(windowed_sig, n_fft)
+
+    # Fourier magnitude spectrum computation.
+    log_magnitude = numpy.log(abs(fft) + eps)
+
+    # Crop components according to fc.
+    for frame in range(windowed_sig.shape[0]):
+        spectrum[frame] = log_magnitude[frame][start:end]
+
+    # Concatenate mean and variance statistics.
+    mu = numpy.mean(spectrum, axis=0)
+    sigma = numpy.std(spectrum, axis=0)
+
+    return numpy.concatenate((mu, sigma))
+
+
 def extract_frames(input_sig, fs=16000, win_time=0.02, shift_time=0.01):
     """
     Splits signal up into (overlapping) frames beginning at increments
@@ -273,7 +334,7 @@ def extract_frames(input_sig, fs=16000, win_time=0.02, shift_time=0.01):
                          context=(0, 0), pad="zeros")
 
     # Windowing.
-    window = np.hamming(window_len)
+    window = numpy.hamming(window_len)
     return framed_sig * window
 
 
@@ -288,11 +349,11 @@ def mfcc(input_sig, lowfreq=100, maxfreq=8000, nlinfilt=0, nlogfilt=24,
                                       prefac=prefac)
 
     # Filter the spectrum through the triangle filter-bank.
-    n_fft = 2 ** int(np.ceil(np.log2(int(round(nwin * fs)))))
+    n_fft = 2 ** int(numpy.ceil(numpy.log2(int(round(nwin * fs)))))
     fbank = trfbank(fs, n_fft, lowfreq, maxfreq, nlinfilt, nlogfilt)[0]
 
     # A tester avec log10 et log.
-    mspec = np.log(np.dot(spec, fbank.T) + 2.2204e-16)
+    mspec = numpy.log(numpy.dot(spec, fbank.T) + 2.2204e-16)
 
     # Use the DCT to "compress" the coefficients (spectrum -> cepstrum domain)
     # The C0 term is removed as it is the constant term.

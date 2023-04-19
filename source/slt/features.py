@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import json
 import os
 import pickle
@@ -18,9 +17,9 @@ from python_speech_features.sigproc import preemphasis
 from scipy import signal
 
 from source.asvspoof_data import ASVspoof
-from source.data_io_utils import flush_process_info, clear_dir
+from source.data_io_utils import clear_dir, flush_process_info
 
-with open("./config/datasets.json") as fh:
+with open('./config/datasets.json') as fh:
     dataset_config = json.loads(fh.read())
 
 
@@ -84,7 +83,6 @@ def ltas(x, nfft, fs=16000, fc=None):
     return np.concatenate((mu, sigma), axis=0)
 
 
-# noinspection DuplicatedCode
 def split_frames(feats, labels):
     # Get info, length of every mXn dimensional list element.
     count = 0
@@ -108,7 +106,7 @@ def split_frames(feats, labels):
             x.append(buffer[j])
             y.append(labels[i])
         j += 1
-        flush_process_info("Completed.", i, len(feats))
+        flush_process_info('Completed.', i, len(feats))
 
     return x, y, info
 
@@ -124,9 +122,7 @@ def reverse_arr(arr):
 
 
 def read_matlab_file(filename):
-    # mat_contents = sio.loadmat(filename + ".mat")["features2"]
-    # noinspection PyUnresolvedReferences
-    mat_contents = sio.loadmat(filename + ".mat")["features2"]
+    mat_contents = sio.loadmat(filename + '.mat')['features2']
     mat_contents = mvn(mat_contents)
 
     return reverse_arr(mat_contents)
@@ -137,18 +133,18 @@ def ltss(subset_list, normalize=False):
         dataset = ASVspoof(
             2017,
             subset,
-            dataset_config["ASVspoof 2017"][subset]["path_to_dataset"],
-            dataset_config["ASVspoof 2017"][subset]["path_to_protocol"],
-            dataset_config["ASVspoof 2017"][subset]["path_to_wav"],
+            dataset_config['ASVspoof 2017'][subset]['path_to_dataset'],
+            dataset_config['ASVspoof 2017'][subset]['path_to_protocol'],
+            dataset_config['ASVspoof 2017'][subset]['path_to_wav'],
         )
         file_list = dataset.file_list
-        path_to_wav = dataset_config["ASVspoof 2017"][subset]["path_to_wav"]
+        path_to_wav = dataset_config['ASVspoof 2017'][subset]['path_to_wav']
         labels = dataset.labels
 
         # Extract features.
         feats = []
         for file in range(len(file_list)):
-            x, fs = sf.read(path_to_wav + file_list[file] + ".wav")
+            x, fs = sf.read(path_to_wav + file_list[file] + '.wav')
             feat = ltas(x, nfft=1024, fc=4000)
 
             # Normalize.
@@ -157,15 +153,15 @@ def ltss(subset_list, normalize=False):
 
             # Append data into the list.
             feats.append(feat)
-            flush_process_info("Completed.", file, len(file_list))
+            flush_process_info('Completed.', file, len(file_list))
         data = feats, labels
 
         # Change directory.
         wor_dir = os.getcwd()
-        os.chdir("../data/features/ltas/")
+        os.chdir('../data/features/ltas/')
 
         # Save data to disk.
-        f = open("ltas_" + subset, "wb+")
+        f = open('ltas_' + subset, 'wb+')
         pickle.dump(data, f)
 
         # Change back to working directory.
@@ -173,16 +169,16 @@ def ltss(subset_list, normalize=False):
 
 
 def cqcc(norm=False):
-    subset_list = ["eval"]
+    subset_list = ['eval']
     for subset in subset_list:
-        path = "../../data/features/cqcc/" + subset
+        path = '../../data/features/cqcc/' + subset
 
         dataset = ASVspoof(
             2017,
             subset,
-            dataset_config["ASVspoof 2017"][subset]["path_to_dataset"],
-            dataset_config["ASVspoof 2017"][subset]["path_to_protocol"],
-            dataset_config["ASVspoof 2017"][subset]["path_to_wav"],
+            dataset_config['ASVspoof 2017'][subset]['path_to_dataset'],
+            dataset_config['ASVspoof 2017'][subset]['path_to_protocol'],
+            dataset_config['ASVspoof 2017'][subset]['path_to_wav'],
         )
         labels = dataset.labels
         wor_dir = os.getcwd()
@@ -200,8 +196,8 @@ def cqcc(norm=False):
         cqcc_feats = split_frames(cqcc_feats.copy(), labels)
 
         # Save to disk.
-        os.chdir("../source")
-        file = open("cqcc_" + subset, "wb+")
+        os.chdir('../source')
+        file = open('cqcc_' + subset, 'wb+')
         pickle.dump(cqcc_feats, file, protocol=3)
         os.chdir(wor_dir)
 
@@ -209,15 +205,15 @@ def cqcc(norm=False):
 
 
 def mfcc(norm=False):
-    subset_list = ["eval"]
+    subset_list = ['eval']
     for subset in subset_list:
-        path = "../../data/features/mfcc/" + subset
+        path = '../../data/features/mfcc/' + subset
         dataset = ASVspoof(
             2017,
             subset,
-            dataset_config["ASVspoof 2017"][subset]["path_to_dataset"],
-            dataset_config["ASVspoof 2017"][subset]["path_to_protocol"],
-            dataset_config["ASVspoof 2017"][subset]["path_to_wav"],
+            dataset_config['ASVspoof 2017'][subset]['path_to_dataset'],
+            dataset_config['ASVspoof 2017'][subset]['path_to_protocol'],
+            dataset_config['ASVspoof 2017'][subset]['path_to_wav'],
         )
         labels = dataset.labels
         wor_dir = os.getcwd()
@@ -236,8 +232,8 @@ def mfcc(norm=False):
         mfcc_feats = split_frames(mfcc_feats.copy(), labels)
 
         # Save to disk.
-        os.chdir("../source/")
-        file = open("mfcc_" + subset, "wb+")
+        os.chdir('../source/')
+        file = open('mfcc_' + subset, 'wb+')
         pickle.dump(mfcc_feats, file)
         os.chdir(wor_dir)
 
@@ -247,7 +243,7 @@ def mfcc(norm=False):
 def high_pass_filter(x, order=10, f_cut=3000):
     # Design a high-pass filter.
     f_cut = f_cut / 8000
-    [b, a] = signal.butter(order, f_cut, "high")
+    [b, a] = signal.butter(order, f_cut, 'high')
 
     # Apply filter to signal.
     x = signal.lfilter(b, a, x)
@@ -255,9 +251,7 @@ def high_pass_filter(x, order=10, f_cut=3000):
     return x
 
 
-# noinspection DuplicatedCode
 def split_feats(feats, labels):
-    # noinspection DuplicatedCode
     """
     Splits given ceps into an array list. One element of feats lists is stored
     in mxn numpy.ndarray (n is ceps number), the function store this data into
@@ -292,7 +286,7 @@ def split_feats(feats, labels):
             x.append(buffer[j])
             y.append(labels[i])
         j += 1
-        flush_process_info("Completed.", i, len(feats))
+        flush_process_info('Completed.', i, len(feats))
 
     return x, y, info
 
@@ -324,32 +318,31 @@ def matrix_to_vector(matrix):
 
 def fix_features(method, feats):
     """
-    Fixes given features according to methods "1", "2", "3". 1" for cropping
-    every data to min value, "2" for scaling data to mean value, "3" for
+    Fixes given features according to methods '1', '2', '3'. 1' for cropping
+    every data to min value, '2' for scaling data to mean value, '3' for
     splitting matrices to vector of all data rows.
 
     Args:
-        method: Fixing method that can be "1", "2", "3".
+        method: Fixing method that can be '1', '2', '3'.
         feats: A data list that contains numpy.ndarray.
 
     Returns:
         Formatted data according to a method.
     """
     fixed_feats = []
-    if method == "1":
+    if method == '1':
         # Find length of feats.
         feat_lengths = np.zeros([len(feats)], dtype=int)
         for i in range(len(feats)):
             feat_lengths[i] = len(feats[i])
-        # noinspection PyArgumentList
         min_len = feat_lengths.min()
 
         # Crop every row that has longer than minimum length.
         for i in range(len(feats)):
             fixed_feats.append(matrix_to_vector(feats[i]))
             fixed_feats[i] = fixed_feats[i][:min_len]
-            flush_process_info("Completed.", i, len(feats))
-    elif method == "2":
+            flush_process_info('Completed.', i, len(feats))
+    elif method == '2':
         feat_lengths = [len(feats[i]) for i in range(len(feats))]
         mean_of_len = ceil(sum(feat_lengths) / len(feats))
 
@@ -383,16 +376,16 @@ def fix_features(method, feats):
                 for j in range(ceps_number):
                     buffer[j, :] = feat[j, 0:mean_of_len]
             fixed_feats.append(buffer)
-            flush_process_info("Completed.", i, len(feats))
-    elif method == "3":
+            flush_process_info('Completed.', i, len(feats))
+    elif method == '3':
         # Convert matrix to vector.
         for i in range(len(feats)):
             buffer = feats[i]
             buffer = matrix_to_vector(buffer)
             fixed_feats.append(buffer)
-            flush_process_info("Completed.", i, len(feats))
+            flush_process_info('Completed.', i, len(feats))
     else:
-        print("Option does not exist. \n")
+        print('Option does not exist. \n')
 
     return fixed_feats
 
@@ -415,13 +408,12 @@ def feature_normalization(feat):
     return normalized_feat
 
 
-# noinspection DuplicatedCode
 def long_term_spectra(x, fs):
     """
     Extracts long-term spectral statistics of given signal. For more details on
-    implementation this method: See Section III of "Presentation Attack
+    implementation this method: See Section III of 'Presentation Attack
     Detection Using Long-Term Spectral Statistics for Trustworthy Speaker
-    Verification"
+    Verification'
 
     Args:
         x: Pure speech signal (note that pre-emphasis, windowing etc. applied
@@ -494,41 +486,41 @@ def deep_features(feature_list, dataset_index, subset_list):
     end = 0
     indexes = 0
     for feature in feature_list:
-        excel_filename = feature + ".xlsx"
+        excel_filename = feature + '.xlsx'
 
         # Read parameters from excel file(.xlsx).
-        xl = pandas.ExcelFile("../data/EXCELS/" + excel_filename)
-        df = xl.parse("mlp_parameters")
-        dataset_name = df["dataset"][dataset_index]
-        path = "/" + dataset_name.upper() + "/" + dataset_name
+        xl = pandas.ExcelFile('../data/EXCELS/' + excel_filename)
+        df = xl.parse('mlp_parameters')
+        dataset_name = df['dataset'][dataset_index]
+        path = '/' + dataset_name.upper() + '/' + dataset_name
 
         # Load model.
-        filename = "../data/MODELS/best_model_" + dataset_name + str(
-            dataset_index) + ".h5"
+        filename = '../data/MODELS/best_model_' + dataset_name + str(
+            dataset_index) + '.h5'
         model = keras.models.load_model(filename)
 
         # model.summary() # print model summary.
         # Get last hidden from deep NN.
         intermediate_layer_model = keras.models.Model(inputs=model.input,
                                                       outputs=model.get_layer(
-                                                          "hidden3").output)
+                                                          'hidden3').output)
         for subset in subset_list:
             dataset = ASVspoof(
                 2017,
                 subset,
-                dataset_config["ASVspoof 2017"][subset]["path_to_dataset"],
-                dataset_config["ASVspoof 2017"][subset]["path_to_protocol"],
-                dataset_config["ASVspoof 2017"][subset]["path_to_wav"],
+                dataset_config['ASVspoof 2017'][subset]['path_to_dataset'],
+                dataset_config['ASVspoof 2017'][subset]['path_to_protocol'],
+                dataset_config['ASVspoof 2017'][subset]['path_to_wav'],
             )
             file_list = dataset.file_list
-            mat_file = "../../data/features/" + \
-                       dataset_name.upper() + "/mat_files/" + subset + "/"
+            mat_file = '../../data/features/' + \
+                       dataset_name.upper() + '/mat_files/' + subset + '/'
             # Load data.
-            if feature == "ltas":
-                data = joblib.load("../../data/features/" + path + "_" +
+            if feature == 'ltas':
+                data = joblib.load('../../data/features/' + path + '_' +
                                    subset)[0]
             else:
-                data = joblib.load("../../data/features/" + path + "_" +
+                data = joblib.load('../../data/features/' + path + '_' +
                                    subset)
                 data, indexes = data[0], data[2]
                 start = 0
@@ -536,19 +528,20 @@ def deep_features(feature_list, dataset_index, subset_list):
             # Convert to numpy array.
             data = np.asarray(data)
             # Convert data types to float32.
-            data = data.astype("float32")
+            data = data.astype('float32')
             # Loop through files.
             for file in range(len(file_list)):
                 # Extract features from intermediate layer.
-                buffer = data[file:(file + 1)] if feature == "ltas" else data[start:end]
+                buffer = data[file:(file + 1)
+                              ] if feature == 'ltas' else data[start:end]
                 intermediate_output = intermediate_layer_model.predict(buffer)
                 # Save feature per file.
-                mdict = {"data": intermediate_output}
-                scipy.io.savemat(mat_file + file_list[file] + ".mat", mdict,
-                                 appendmat=True, format="5",
+                mdict = {'data': intermediate_output}
+                scipy.io.savemat(mat_file + file_list[file] + '.mat', mdict,
+                                 appendmat=True, format='5',
                                  long_field_names=False, do_compression=False,
-                                 oned_as="row")
-                if feature != "ltas":
+                                 oned_as='row')
+                if feature != 'ltas':
                     start = end
                     end = indexes[file] + start
         # Delete model to release gpu memory.
@@ -557,16 +550,16 @@ def deep_features(feature_list, dataset_index, subset_list):
 
 def load_deep_feat(dataset, subset_list):
     # Load mat file back.
-    mat_file = "../../data/features/" + dataset.upper() + "/mat_files/" + \
-               subset_list[0] + "/"
+    mat_file = '../../data/features/' + dataset.upper() + '/mat_files/' + \
+               subset_list[0] + '/'
     file_list = ASVspoof(
         2017,
         subset_list[0],
-        dataset_config["ASVspoof 2017"][subset_list[0]]["path_to_dataset"],
-        dataset_config["ASVspoof 2017"][subset_list[0]]["path_to_protocol"],
-        dataset_config["ASVspoof 2017"][subset_list[0]]["path_to_wav"],
+        dataset_config['ASVspoof 2017'][subset_list[0]]['path_to_dataset'],
+        dataset_config['ASVspoof 2017'][subset_list[0]]['path_to_protocol'],
+        dataset_config['ASVspoof 2017'][subset_list[0]]['path_to_wav'],
     ).file_list
-    return scipy.io.loadmat(mat_file + file_list[1000])["data"]
+    return scipy.io.loadmat(mat_file + file_list[1000])['data']
 
 
 def extract_features(feature_list, subset_list):
@@ -574,33 +567,34 @@ def extract_features(feature_list, subset_list):
     # Feature_type, normalization, filter, context, frame_wise.
     for i in range(len(feature_list)):
         f_type = feature_list[i]
-        path = "../../data/features/" + f_type.upper() + "/"
+        path = '../../data/features/' + f_type.upper() + '/'
         file = path + f_type
         # Select params for feature types.
         # normalization, filter, context, frame_wise.
-        if f_type == "ltas":
+        if f_type == 'ltas':
             params = [True, False, False, False]
-        elif f_type in ["mfcc", "power_spectrum"]:
+        elif f_type in ['mfcc', 'power_spectrum']:
             params = [True, False, False, True]
-        elif f_type == "frames":
+        elif f_type == 'frames':
             params = [False, False, False, True]
         else:
-            raise AssertionError("Feature type not found.")
+            raise AssertionError('Feature type not found.')
         # Loop through feature list.
         for j in range(len(subset_list)):
             s = subset_list[i]
             subset = ASVspoof(
                 2017, subset_list[j],
-                dataset_config["ASVspoof 2017"][s]["path_to_dataset"],
-                dataset_config["ASVspoof 2017"][s]["path_to_protocol"],
-                dataset_config["ASVspoof 2017"][s]["path_to_wav"])
+                dataset_config['ASVspoof 2017'][s]['path_to_dataset'],
+                dataset_config['ASVspoof 2017'][s]['path_to_protocol'],
+                dataset_config['ASVspoof 2017'][s]['path_to_wav'])
 
             feats, labels = Feature(subset).extract(f_type,
                                                     f_n=params[0],
                                                     apply_filter=params[1],
                                                     context=params[2])
-            data = split_feats(feats, labels) if params[3] is True else (feats, labels)
-            joblib.dump(data, file + "_" + subset_list[j])
+            data = split_feats(
+                feats, labels) if params[3] is True else (feats, labels)
+            joblib.dump(data, file + '_' + subset_list[j])
             del data, feats, labels
 
 
@@ -618,30 +612,30 @@ class Feature(object):
         self.feats = []
         # Sidekit extractor.
         self.extractor = sidekit.FeaturesExtractor(
-            audio_filename_structure=self.obj.path_to_wav + "{}.wav",
-            feature_filename_structure="../../data/features/sidekit/" +
-                                       self.obj.subset + "/" + "{}.h5",
+            audio_filename_structure=self.obj.path_to_wav + '{}.wav',
+            feature_filename_structure='../../data/features/sidekit/' +
+                                       self.obj.subset + '/' + '{}.h5',
             sampling_frequency=16000,
             lower_frequency=6000,
             higher_frequency=8000,
-            filter_bank="log",
+            filter_bank='log',
             filter_bank_size=27,
             window_size=0.025,
             shift=0.01,
             ceps_number=19,
-            vad="snr",
+            vad='snr',
             snr=40,
             pre_emphasis=0.97,
-            save_param=["cep", "energy"],
+            save_param=['cep', 'energy'],
             keep_all_features=True)
         # Sidekit server.
         self.server = sidekit.FeaturesServer(
             features_extractor=None,
-            feature_filename_structure="../../data/features/SIDEKIT/" +
-                                       obj.subset + "/{}.h5",
+            feature_filename_structure='../../data/features/SIDEKIT/' +
+                                       obj.subset + '/{}.h5',
             # feature_filename_structure=None,
             sources=None,
-            dataset_list=["cep", "energy"],
+            dataset_list=['cep', 'energy'],
             mask=None,
             feat_norm=None,
             global_cmvn=False,
@@ -666,12 +660,12 @@ class Feature(object):
         https://www-lium.univ-lemans.fr/sidekit/tutorial/featuresextractor.html
         """
         # Delete old files in directory.
-        clear_dir("../../data/features/SIDEKIT/" + self.obj.subset + "/",
-                  ".h5")
+        clear_dir('../../data/features/SIDEKIT/' + self.obj.subset + '/',
+                  '.h5')
         # Extract and save features.
         for i in range(len(self.obj.file_list)):
             self.extractor.save(self.obj.file_list[i])
-            flush_process_info("Completed.", i, len(self.obj.file_list))
+            flush_process_info('Completed.', i, len(self.obj.file_list))
 
     def extract(self, f_type, fs=16000, f_n=False, apply_filter=False,
                 context=False):
@@ -679,8 +673,8 @@ class Feature(object):
         Extracts features.
 
         Args:
-            f_type: Can be "mfcc", "mfcc_sdc", "mfcc_pca_sdc", "ltas",
-            "power_spectrum".
+            f_type: Can be 'mfcc', 'mfcc_sdc', 'mfcc_pca_sdc', 'ltas',
+            'power_spectrum'.
             fs: Sampling frequency.
             f_n: Feature normalization.
             apply_filter: Apply high pass filter to signal.
@@ -691,10 +685,10 @@ class Feature(object):
         """
         # Extract selected method to data in x.
         for i in range(len(self.obj.file_list)):
-            x = sf.read(self.obj.path_to_wav + self.obj.file_list[i] + ".wav")[
+            x = sf.read(self.obj.path_to_wav + self.obj.file_list[i] + '.wav')[
                 0]
             # print(str(self.obj.path_to_wav) + str(self.obj.file_list[i]) +
-            # ".wav")
+            # '.wav')
             # Add random noise on elements to avoid dividing values to zero.
             np.random.seed(0)
             rand_noise = 0.0001 * np.random.randn(1)
@@ -703,7 +697,7 @@ class Feature(object):
             if apply_filter is True:
                 x = high_pass_filter(x)
             # Feature extraction.
-            if f_type == "mfcc":
+            if f_type == 'mfcc':
                 mfcc_ = sidekit.frontend.features.mfcc(x,
                                                        lowfreq=6000,
                                                        maxfreq=8000,
@@ -718,27 +712,28 @@ class Feature(object):
                                                        prefac=0.97)
                 # Add log-energy as first coefficient.
                 mfcc_ = np.insert(mfcc_[0], 0, values=mfcc_[1], axis=1)
-                feat = self.server.get_context(mfcc_)[0] if context is True else mfcc_
-            elif f_type == "ltas":
+                feat = self.server.get_context(
+                    mfcc_)[0] if context is True else mfcc_
+            elif f_type == 'ltas':
                 feat = long_term_spectra(x, fs)
-            elif f_type == "power_spectrum":
+            elif f_type == 'power_spectrum':
                 feat = sidekit.frontend.features.power_spectrum(x, fs=fs)
                 # Add log-energy as first coefficient.
                 feat = np.insert(feat[0], 0, values=feat[1], axis=1)
-            elif f_type == "frames":
+            elif f_type == 'frames':
                 feat = get_frames(x, fs)
             else:
-                raise AssertionError("Feature type not found.")
+                raise AssertionError('Feature type not found.')
             if f_n is True:
                 feat = feature_normalization(feat)
             # Append to the feats list.
             self.feats.append(feat)
-            flush_process_info("Completed.", i, len(self.obj.file_list))
+            flush_process_info('Completed.', i, len(self.obj.file_list))
         return self.feats, self.obj.labels
 
 
-if __name__ == "__main__":
-    extract_features(feature_list=["ltas"],
-                     subset_list=["train", "dev", "eval"])
-    extract_features(feature_list=["mfcc"],
-                     subset_list=["train", "dev", "eval"])
+if __name__ == '__main__':
+    extract_features(feature_list=['ltas'],
+                     subset_list=['train', 'dev', 'eval'])
+    extract_features(feature_list=['mfcc'],
+                     subset_list=['train', 'dev', 'eval'])

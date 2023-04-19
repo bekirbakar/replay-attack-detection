@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 import keras
 import numpy
-from keras.backend import clear_session
-from keras.layers import Activation, Dense, Dropout
-from keras.models import Sequential
 
-import source.scoring as scoring
-from source.data_io_utils import load_excel, read_data, save_data, save_excel
+import scoring
+from data_io_utils import load_excel, read_data, save_data, save_excel
 
 
-def create_network(n_dense, input_shape, dense_units, activation, dropout, dropout_rate,
-                   kernel_initializer='lecun_normal', optimizer='sgd'):
+def create_network(n_dense, input_shape, dense_units, activation, dropout,
+                   dropout_rate, kernel_initializer='lecun_normal',
+                   optimizer='sgd'):
     """
     Generic function to create a fully-connected neural network.
 
@@ -30,25 +27,28 @@ def create_network(n_dense, input_shape, dense_units, activation, dropout, dropo
         A Keras model instance (compiled).
     """
     # Clear gpu memory first.
-    clear_session()
+    keras.backend.clear_session()
 
     # Set input layer.
-    model = Sequential()
-    model.add(Dense(dense_units, input_shape=(input_shape,), kernel_initializer=kernel_initializer))
-    model.add(Activation(activation))
+    model = keras.models.Sequential()
+    model.add(keras.layers.Dense(dense_units, input_shape=(
+        input_shape,), kernel_initializer=kernel_initializer))
+    model.add(keras.layers.Activation(activation))
     model.add(dropout(dropout_rate))
 
     # Set hidden layer(s).
     for _ in range(n_dense - 1):
-        model.add(Dense(dense_units, kernel_initializer=kernel_initializer))
-        model.add(Activation(activation))
+        model.add(keras.layers.Dense(
+            dense_units, kernel_initializer=kernel_initializer))
+        model.add(keras.layers.Activation(activation))
         # model.add(BatchNormalization())
         model.add(dropout(dropout_rate))
 
     # Set output layer.
-    model.add(Dense(2))
-    model.add(Activation('softmax'))
-    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model.add(keras.layers.Dense(2))
+    model.add(keras.layers.Activation('softmax'))
+    model.compile(loss='binary_crossentropy', optimizer=optimizer,
+                  metrics=['accuracy'])
 
     # Print out model summary.
     model.summary()
@@ -68,7 +68,7 @@ def evaluate_model(filename, e_data):
         EER and score_file.
     """
     # Load best model.
-    path_to_model = f'../data/models/{filename}.h5'
+    path_to_model = f'{filename}.h5'
     best_model = keras.models.load_model(path_to_model)
 
     return best_model.predict(e_data, verbose=0)
@@ -105,9 +105,10 @@ for feature_ in feature_list:
         # Create network.
         print('Creating network...')
         network = {'n_dense': len(mlp_params['dense_units'][line].split('-')),
-                   'dense_units': int(mlp_params['dense_units'][line].split('-')[0]),
+                   'dense_units':
+                   int(mlp_params['dense_units'][line].split('-')[0]),
                    'activation': mlp_params['activation'][line],
-                   'dropout': Dropout,
+                   'dropout': keras.layers.Dropout,
                    'dropout_rate': 0.4,
                    'optimizer': 'sgd'}
         # Create model.
@@ -127,17 +128,24 @@ for feature_ in feature_list:
             epoch += 1
 
             # Train model.
-            metrics = keras_model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=1,
-                                      batch_size=batch_size, shuffle=True, verbose=0)
-            predictions = keras_model.predict(x_test, verbose=0, batch_size=batch_size)
+            metrics = keras_model.fit(x_train, y_train,
+                                      validation_data=(x_test, y_test),
+                                      epochs=1, batch_size=batch_size,
+                                      shuffle=True, verbose=0)
+            predictions = keras_model.predict(x_test, verbose=0,
+                                              batch_size=batch_size)
 
-            score_file = scoring.create(probabilities=predictions, labels=test_labels,
-                                        file_list=test_file_list, indexes=test_indexes)
+            score_file = scoring.create(probabilities=predictions,
+                                        labels=test_labels,
+                                        file_list=test_file_list,
+                                        indexes=test_indexes)
+
             this_eer = scoring.calculate_eer(score_file)
             dev_eer.append(this_eer)
             val_acc.append(metrics.history['val_acc'][0] * 20)
-            print('Epoch = {}, Eer (validation) = {}, accuracy(train) = {:,.4}'.format(epoch, this_eer,
-                                                                                       metrics.history['acc'][0]))
+            print('Epoch = {}, Eer (validation) = {}, accuracy(train) = {:,.4}'
+                  .format(epoch, this_eer, metrics.history['acc'][0]))
+
             early_stop += 1
             if this_eer < best_eer * 0.995:
                 # If best eer is found.
@@ -145,7 +153,7 @@ for feature_ in feature_list:
                 save_data(score_file, (feature_ + str(line) + 'dev.txt'))
 
                 # Save best model.
-                model_file = f'../data/models/best_model_{feature_}{str(line)}.h5'
+                model_file = f'best_model_{feature_}{str(line)}.h5'
                 keras_model.save(model_file)
                 print(f'Best eer = {best_eer}, model saved.\n')
                 early_stop = 0

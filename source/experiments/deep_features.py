@@ -1,28 +1,37 @@
-# -*- coding: utf-8 -*-
+"""
+A module to extract deep features from a CNN model for audio classification.
+
+This module loads a pre-trained CNN model, extracts features from the last
+hidden layer, and saves the features to .mat files.
+"""
+
 import joblib
 import keras
 import numpy
-import pandas as pd
+import pandas
 import scipy.io
-from keras.backend import clear_session
 
 
-def deep_features(feature_list, dataset_index, subset_list, file_list, path_to_excel, filename):
+def deep_features(feature_list, dataset_index, subset_list, file_list,
+                  path_to_excel, filename):
     start, indexes, end = 0, 0, 0
-    feat_dir = '../data/features/'
+
+    feat_dir = 'feats/'
     for feature in feature_list:
         # Read parameters from excel file (.xlsx).
-        xl = pd.ExcelFile(path_to_excel)
+        xl = pandas.ExcelFile(path_to_excel)
         df = xl.parse('mlp-parameters')
         dataset = df['dataset'][dataset_index]
-        path = '/' + dataset.upper() + '/' + dataset
+        path = f'/{dataset.upper()}/{dataset}'
 
         # Load model.
         model = keras.models.load_model(filename)
         model.summary()
 
         # Get last hidden layer of deep NN.
-        intermediate_layer_model = keras.models.Model(inputs=model.input, outputs=model.get_layer('hidden3').output)
+        intermediate_layer_model = keras.models.Model(
+            inputs=model.input, outputs=model.get_layer('hidden3').output
+        )
 
         for subset in subset_list:
             mat_file = feat_dir + dataset.upper() + '/mat_files/' + subset
@@ -44,15 +53,18 @@ def deep_features(feature_list, dataset_index, subset_list, file_list, path_to_e
             # Loop through files.
             for file in range(len(file_list)):
                 # Extract features from intermediate layer.
-                buffer = data[file:(file + 1)] if feature == 'ltas' else data[start:end]
+                buffer = data[file:(file + 1)] if feature == 'ltas' \
+                    else data[start:end]
                 intermediate_output = intermediate_layer_model.predict(buffer)
 
                 # Save feature per file.
                 mdict = {'data': intermediate_output}
-                scipy.io.savemat(mat_file + file_list[file] + '.mat', mdict, appendmat=True, format='5',
-                                 long_field_names=False, do_compression=False, oned_as='row')
+                scipy.io.savemat(mat_file + file_list[file] + '.mat', mdict,
+                                 appendmat=True, format='5',
+                                 long_field_names=False, do_compression=False,
+                                 oned_as='row')
                 if feature != 'ltas':
                     start = end
                     end = indexes[file] + start
 
-    clear_session()
+    keras.backend.clear_session()
