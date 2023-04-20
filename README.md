@@ -6,6 +6,8 @@ This repository contains initial experimental codes related to Replay Attack Det
 The work was done under the project supported by the Scientific and Technological Research Council of Turkey (TÜBİTAK) entitled "Audio Spoofing Attack Detection Under Adverse Condition for Trustworthy Speaker Verification" with the project number 115E916.
 </p>
 
+Use with Python Version = 3.6
+
 ## Related Publications
 
 - **Master's Thesis**
