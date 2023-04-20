@@ -8,6 +8,3 @@
 # Python cache and virtual environment.
 **/__pycache__
 venv/**
-
-# Hidden Files
-hidden-files/**
